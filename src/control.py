@@ -24,8 +24,8 @@ class deltaControl:
         if self.counter == len(self.jointArray1):
             self.counter = 0
             self.jointArray1 = self.jointArray3[::-1]
-            self.jointArray2 = self.jointArray1[::-1]
-            self.jointArray3 = self.jointArray2[::-1]
+            self.jointArray2 = self.jointArray2[::-1]
+            self.jointArray3 = self.jointArray1[::-1]
         angle1 = self.jointArray1[self.counter]
         angle2 = self.jointArray2[self.counter]
         angle3 = self.jointArray3[self.counter]
