@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 import numpy as np
+from math import cos, sin, pi, radians, atan
 from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose, Quaternion, Point
@@ -118,45 +119,46 @@ class deltaControl(object):
         self.modelParam.update({'b': b})
         self.modelParam.update({'c': c})
 
-    def ik_delta(self,x,y,z):
-        # Takes in x,y,z coordinates and returns a list of joints angles
+    def ik_delta(self, x, y, z):
+        p = np.array([x, y, z])
+        blist = np.array([[self.rBase, 0, 0],
+                          [self.rBase * cos(radians(120)), self.rBase * sin(radians(120)), 0],
+                          [self.rBase * cos(radians(240)), self.rBase * sin(radians(240)), 0]])
+        plist = np.array([[self.rEE, 0, 0],
+                          [self.rEE * cos(radians(120)), self.rEE * sin(radians(120)), 0],
+                          [self.rEE * cos(radians(240)), self.rEE * sin(radians(240)), 0]])
 
-        # Joint 1:
-        E1 = 2.*self.lowLinkLength * (y + self.modelParam['a']) # 2*L*(y + a)
-        F1 = 2. * z * self.lowLinkLength # 2*z*L
-        G1 = x**2 + y**2 + z**2  + self.modelParam['a']**2 + self.lowLinkLength**2 + 2.*y*self.modelParam['a'] - \
-            self.upLinkLength**2 # x^2 + y^2 + z^2 + a^2 + L^2 + 2*y*a - l^2
+        pmblist = plist - blist
+        bmplist = blist - plist
 
-        # Joint 2:
-        E2 = -self.lowLinkLength*(np.sqrt(3)*(x + self.modelParam['b']) + y +self.modelParam['c']) # -L*(sqrt(3)*(x + b) + y +c)
-        F2 = 2*z*self.lowLinkLength #2*z*L
-        G2 = x**2 + y**2 + z**2 + self.modelParam['b']**2 + self.modelParam['c']**2 + self.lowLinkLength**2 + 2*x*self.modelParam['b'] + \
-            2*y*self.modelParam['c'] - self.upLinkLength**2 # x^2 + y^2 + z^2 + b^2 + c^2 + L^2 + 2*x*b + 2*y*c - l^2
+        G = np.zeros((1, 3))
+        E = np.zeros((1, 3))
+        F = np.zeros((1, 3))
+        tp = np.zeros((1, 3))
+        tm = np.zeros((1, 3))
+        thetap = np.zeros((1, 3))
+        thetam = np.zeros((1, 3))
+        theta = [None, None, None]
 
-        #Joint 3
-        E3 = self.lowLinkLength * (np.sqrt(3) * (x - self.modelParam['b']) - y - self.modelParam['c']) #L*(sqrt(3)*(x-b) - y -c)
-        F3 = 2*z*self.lowLinkLength #2*z*L
-        G3 = x**2 + y**2 + z**2 + self.modelParam['b']**2 + self.modelParam['c']**2 + self.lowLinkLength**2 - \
-            2*x*self.modelParam['b'] + 2*y*self.modelParam['c'] - self.upLinkLength**2
-        #x^2 + y^2 + z^2 + b^2 + c^2 + L^2 -2*x*b + 2*y*c - l^2
+        for i in range(3):
+            G[0][i] = self.upLinkLength ** 2 - self.lowLinkLength ** 2 - self.distance(p, bmplist[i]) ** 2
+            E[0][i] = 2 * p[2] * self.lowLinkLength + 2 * pmblist[i][2] * self.lowLinkLength
+            F[0][i] = 2 * self.lowLinkLength * (
+            (p[0] + pmblist[i][0]) * cos(radians((i + 1) * 120 - 120)) + (p[1] + pmblist[i][1]) * sin(
+                radians((i + 1) * 120 - 120)))
+            tp[0][i] = (-F[0][i] + np.sqrt(E[0][i] ** 2 + F[0][i] ** 2 - G[0][i] ** 2)) / (G[0][i] - E[0][i])
+            tm[0][i] = (-F[0][i] - np.sqrt(E[0][i] ** 2 + F[0][i] ** 2 - G[0][i] ** 2)) / (G[0][i] - E[0][i])
+            thetap[0][i] = 2 * atan(tp[0][i])
+            thetam[0][i] = 2 * atan(tm[0][i])
+            if -pi / 4 <= thetap[0][i] and thetap[0][i] <= pi / 2:
+                print np.isreal(thetap[0][i])
+                if np.isreal(thetap[0][i]):
+                    theta[i] = thetap[0][i]
 
-        E = [E1, E2, E3]
-        F = [F1, F2, F3]
-        G = [G1, G2, G3]
-        th = [0, 0, 0]
-
-        for i,(e,f,g) in enumerate(zip(E,F,G)):
-            t1 = (-f + np.sqrt(e**2 + f**2 - g**2))/(g - e)
-            t2 = (-f - np.sqrt(e ** 2 + f ** 2 - g ** 2)) / (g - e)
-
-            th1 = 2*np.arctan(t1)
-            th2 = 2 * np.arctan(t2)
-
-            #
-            # Choose angle that is in correct domain:
-            # For now, we assume that the answer is t2
-            th[i] = th2
-        return th
+            if -pi / 4 <= thetam[0][i] and thetam[0][i] <= pi / 2:
+                if np.isreal(thetam[0][i]):
+                    theta[i] = thetam[0][i]
+        return np.array(theta)*-1
 
     def control(self, eePos):
         # if self.eeCounter == 10:
@@ -183,11 +185,11 @@ class deltaControl(object):
         Derror = (errorAng - self.eprev)/self.dt
         self.eprev = errorAng
 
-        Kp = 1
-        Ki = 1
+        Kp = 400
+        Ki = 10
         Kd = 1
 
-        control_vel = ((Kp*errorAng + Ki*self.eInt + Kd*Derror) * (np.pi/180))/1000
+        control_vel = ((Kp*errorAng + Ki*self.eInt + Kd*Derror) * (np.pi/180))
         rospy.loginfo("Control Velocity")
         rospy.loginfo(control_vel)
         controlInfo = JointState()
@@ -198,7 +200,8 @@ class deltaControl(object):
         self.eeCounter = 0
         self.pubRate.sleep()
         self.counter += 1
-        if self.counter == len(self.trajectory):
+        print self.counter
+        if self.counter == len(self.trajectory[0]):
             self.counter = 0
         # else:
         #     self.eeCounter += 1
@@ -206,16 +209,21 @@ class deltaControl(object):
     @staticmethod
     def setUpTraj():
         # Set up a trajectory to move ee in circle or radius .1
+        radius = .25
         traj = [[], [], []]
-        rads = np.linspace(0, 2 * np.pi, 1000)
+        rads = np.linspace(0, 2 * np.pi, 250)
         for i in range(len(rads)):
-            traj[0].append(np.cos(rads[i]) * .5)
-            traj[1].append(np.sin(rads[i]) * .5)
-            traj[2].append(-.5)
+            traj[0].append(np.cos(rads[i]) * radius)
+            traj[1].append(np.sin(rads[i]) * radius)
+            traj[2].append(.6)
         traj[0].extend(traj[0][::-1])
         traj[1].extend(traj[1][::-1])
         traj[2].extend(traj[2][::-1])
         return traj
+
+    @staticmethod
+    def distance(a, b):
+        return np.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2)
 
 def main():
     rospy.init_node('delta_control')

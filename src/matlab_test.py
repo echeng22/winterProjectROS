@@ -25,6 +25,7 @@ R_base = .4
 R_platform = .05
 L_base = .3
 L_platform = .58
+
 def ikDelta(x,y,z):
     p = np.array([x,y,z])
     blist = np.array([[R_base, 0, 0],
@@ -48,7 +49,6 @@ def ikDelta(x,y,z):
 
 
     for i in range(3):
-        print i
         G[0][i] = L_platform**2 - L_base**2 - distance(p,bmplist[i])**2
         E[0][i] = 2*p[2]*L_base + 2*pmblist[i][2]*L_base
         F[0][i] = 2*L_base*((p[0] + pmblist[i][0])*cos(radians((i + 1)*120-120)) + (p[1]+pmblist[i][1])*sin(radians((i + 1)*120-120)))
@@ -69,4 +69,4 @@ def ikDelta(x,y,z):
 
 
 
-print ikDelta(-.0299,.1119,.5708)*-180/pi
+print ikDelta(-.5,.0,-.5)*-180/pi
