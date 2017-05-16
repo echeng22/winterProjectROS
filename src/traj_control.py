@@ -11,10 +11,9 @@ import time
 
 class deltaControl(object):
 
-
     def __init__(self):
-        self._jAnglePub = rospy.Publisher("/Delta_base/desired_joint_pos", JointState, queue_size=10)
-        self._jVelPub = rospy.Publisher("/Delta_base/joint_vel", JointState, queue_size=10)
+        self._jAnglePub = rospy.Publisher("/Delta_base/desired_joint_pos", JointState)
+        self._jVelPub = rospy.Publisher("/Delta_base/joint_vel", JointState)
         self._jointSub = rospy.Subscriber("/Delta_base/rev_joint", JointState, self.loadJoints)
         self._eePosSub = rospy.Subscriber("/Delta_base/ee_pos", Pose, self.control)
         self.pubRate = rospy.Rate(200)
@@ -78,7 +77,7 @@ class deltaControl(object):
         traj = [[], [], []]
         rads = np.linspace(0,2*np.pi, 200)
         for i in range(len(rads)):
-            traj[0].append(-.1444 + np.cos(rads[i]) * .25)
+            traj[0].append(np.cos(rads[i]) * .25)
             traj[1].append(np.sin(rads[i]) * .25)
             traj[2].append(.75)
         traj[0].extend(traj[0][::-1])
