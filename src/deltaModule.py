@@ -26,25 +26,28 @@ def ik_delta(x, y, z, modelParams):
     thetam = np.zeros((1, 3))
     theta = [None, None, None]
 
-    for i in range(3):
-        G[0][i] = modelParams['upLinkLength'] ** 2 - modelParams['lowLinkLength'] ** 2 - distance(p, bmplist[i]) ** 2
-        E[0][i] = 2 * p[2] * modelParams['lowLinkLength'] + 2 * pmblist[i][2] * modelParams['lowLinkLength']
-        F[0][i] = 2 * modelParams['lowLinkLength'] * (
-            (p[0] + pmblist[i][0]) * cos(radians((i + 1) * 120 - 120)) + (p[1] + pmblist[i][1]) * sin(
-                radians((i + 1) * 120 - 120)))
-        tp[0][i] = (-F[0][i] + np.sqrt(E[0][i] ** 2 + F[0][i] ** 2 - G[0][i] ** 2)) / (G[0][i] - E[0][i])
-        tm[0][i] = (-F[0][i] - np.sqrt(E[0][i] ** 2 + F[0][i] ** 2 - G[0][i] ** 2)) / (G[0][i] - E[0][i])
-        thetap[0][i] = 2 * atan(tp[0][i])
-        thetam[0][i] = 2 * atan(tm[0][i])
-        if -pi / 4 <= thetap[0][i] <= pi / 2:
-            print np.isreal(thetap[0][i])
-            if np.isreal(thetap[0][i]):
-                theta[i] = thetap[0][i]
+    try:
+        for i in range(3):
+            G[0][i] = modelParams['upLinkLength'] ** 2 - modelParams['lowLinkLength'] ** 2 - distance(p, bmplist[i]) ** 2
+            E[0][i] = 2 * p[2] * modelParams['lowLinkLength'] + 2 * pmblist[i][2] * modelParams['lowLinkLength']
+            F[0][i] = 2 * modelParams['lowLinkLength'] * (
+                (p[0] + pmblist[i][0]) * cos(radians((i + 1) * 120 - 120)) + (p[1] + pmblist[i][1]) * sin(
+                    radians((i + 1) * 120 - 120)))
+            tp[0][i] = (-F[0][i] + np.sqrt(E[0][i] ** 2 + F[0][i] ** 2 - G[0][i] ** 2)) / (G[0][i] - E[0][i])
+            tm[0][i] = (-F[0][i] - np.sqrt(E[0][i] ** 2 + F[0][i] ** 2 - G[0][i] ** 2)) / (G[0][i] - E[0][i])
+            thetap[0][i] = 2 * atan(tp[0][i])
+            thetam[0][i] = 2 * atan(tm[0][i])
+            if -pi / 4 <= thetap[0][i] <= pi / 2:
+                print np.isreal(thetap[0][i])
+                if np.isreal(thetap[0][i]):
+                    theta[i] = thetap[0][i] * -1
 
-        if -pi / 4 <= thetam[0][i] <= pi / 2:
-            if np.isreal(thetam[0][i]):
-                theta[i] = thetam[0][i]
-    return np.array(theta) * -1
+            if -pi / 4 <= thetam[0][i] <= pi / 2:
+                if np.isreal(thetam[0][i]):
+                    theta[i] = thetam[0][i] * -1
+    except RuntimeError:
+        return np.array(theta)
+    return np.array(theta)
 
 if __name__=="__main__":
     print "ERROR"

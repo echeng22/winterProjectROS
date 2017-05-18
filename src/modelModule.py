@@ -7,6 +7,7 @@ class modelParams(object):
     def __init__(self):
         # Subscribers to model paramters
         self.modelParams = dict.fromkeys(('rBase', 'rEE', 'lowLinkLength', 'upLinkLength'))
+        # self.modelUpdate = 0
 
         self._baseParamSub = rospy.Subscriber("/Delta_base/base_radius", Float64, self.setBase) # Sub to base radius
         self._eeParamSub = rospy.Subscriber("/Delta_base/ee_radius", Float64, self.setEE) # Sub to ee radiues
@@ -18,6 +19,7 @@ class modelParams(object):
     def loadIK(self):
         if self.updateCount == self.num_param:
             rospy.set_param('model_param',self.modelParams)
+            # rospy.set_param('model_update', self.modelUpdate)
             rospy.logerr("%d parameters loaded!", self.updateCount)
             self.updateCount = 0
             rospy.logerr(getModelParams())
