@@ -84,9 +84,9 @@ class joyStick(object):
                 self.eprev = errorAng
 
                 # PID Parameters
-                Kp = 400
+                Kp = 800
                 Ki = 10
-                Kd = 1
+                Kd = 100
 
                 # Calculate the control velocity
                 control_vel = ((Kp * errorAng + Ki * self.eInt + Kd * Derror) * (np.pi / 180))
